@@ -62,6 +62,15 @@
 
                 let first = null;
                 let last = null;
+                let sizes_copy = {}
+                for (let idx in sizes) {
+                    if (idx < '2022-08-31 19') {
+                        continue;
+                    }
+                    sizes_copy[idx] = sizes[idx];
+                }
+                sizes = sizes_copy;
+
                 for (let idx in sizes) {
                     if (!first) {
                         first = idx;

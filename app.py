@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 parser = argparse.ArgumentParser(description='Erigon monitor params')
-parser.add_argument('--no-dump-journal', dest="dumpjournal", action='store_false', help='No journal dump for debugging')
 parser.add_argument('--host', dest="host", type=str, help='Host name', default="127.0.0.1")
 parser.add_argument('--port', dest="port", type=int, help='Port number', default="5000")
 parser.add_argument('--interval', dest="interval", type=int, help='Log scanning interval', default="30")
@@ -90,6 +89,7 @@ def html():
 @app.route('/htmltest')
 def htmltest():
     return render_template('plot.html', sizes_url="http://51.38.53.113:5000/sizes")
+
 
 @app.route('/sizes')
 @cross_origin()
