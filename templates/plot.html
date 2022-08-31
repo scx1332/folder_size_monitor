@@ -7,9 +7,9 @@
 <body>
 
 <div style="padding: 20px;">
-    <div style="padding: 10px;">Last check: <span id="lastCheck"></span> <span id="lastErigon">Last Erigon event:</span></div>
-    <div style="padding: 10px;">Last block speed: <span id="lastSpeed"></span> blocks/s</div>
-    <div style="padding: 10px;">Estimated completion: <span id="estCompletion"></span> </div>
+    <div style="padding: 10px;">Last check: <span id="lastCheck"></span></div>
+    <div style="padding: 10px;">Last size change (per s): <span id="lastSpeed"></span> bytes/s</div>
+    <div style="padding: 10px;">Last size change (per day): <span id="lastSpeedDays"></span> bytes/day</div>
 </div>
 <div id='myDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
 </body>
@@ -36,8 +36,6 @@
             title: 'Size of monitored path',
             yaxis: {
                 title: 'Size (bytes)',
-
-
             },
             yaxis2: {
                 title: 'yaxis2 title',
@@ -48,12 +46,12 @@
             }
         });
 
-
-        document.getElementById("lastSpeed").innerHTML=d["lastSpeed"];
+        //document.getElementById("lastSpeed").innerHTML=d["lastSpeed"];
         document.getElementById("estCompletion").innerHTML=d["estimatedCompletion"];
         document.getElementById("lastErigon").innerHTML=d["lastDate"];
 
     }
+
     getJSON('{{sizes_url}}',
         function(err, sizes) {
             if (err !== null) {
@@ -61,6 +59,28 @@
             } else {
                 console.log(`Sizes ${sizes}`)
                 //document.getElementById("lastCheck").innerHTML=sizes["last_check"];
+
+                let first = null;
+                let last = null;
+                for (let idx in sizes) {
+                    if (!first) {
+                        first = idx;
+                    }
+                    last = idx;
+                }
+                console.log(sizes[last]["path_size"] - sizes[first]["path_size"]);
+                console.log((new Date(last) - new Date(first)) / 1000);
+
+                let timeSec = (new Date(last) - new Date(first)) / 1000;
+                let sizeDiff = sizes[last]["path_size"] - sizes[first]["path_size"];
+
+                console.log(sizeDiff / timeSec);
+
+                let secondsInDay = 60 * 60 * 24;
+
+                document.getElementById("lastCheck").innerHTML = last;
+                document.getElementById("lastSpeed").innerHTML = bytesToSize(sizeDiff / timeSec).toString();
+                document.getElementById("lastSpeedDays").innerHTML = bytesToSize(sizeDiff / timeSec * secondsInDay).toString();
 
                 plotFromJson(sizes);
             }
