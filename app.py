@@ -47,18 +47,24 @@ class ProcessClass:
                 folder = args.path
 
                 total_size = 0
+                number_of_files_found = 0
+                number_of_files_failed = 0
                 for path, dirs, files in os.walk(folder):
                     for f in files:
                         fp = os.path.join(path, f)
                         try:
                             total_size += os.path.getsize(fp)
+                            number_of_files_found += 1
                         except IOError as err:
+                            number_of_files_failed += 1
                             logger.error(f"Error getting size of {fp}: {err}")
                             pass
-                        
+
                 logger.info(f"Total size of directory {folder} {total_size})")
                 size_history[datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")] = {
-                    "path_size": total_size
+                    "path_size": total_size,
+                    "files_found": number_of_files_found,
+                    "files_failed": number_of_files_failed
                 }
                 with open("size_history_tmp.json", "w") as w:
                     w.write(json.dumps(size_history, indent=4, default=str))
