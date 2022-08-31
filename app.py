@@ -20,7 +20,7 @@ parser.add_argument('--no-dump-journal', dest="dumpjournal", action='store_false
 parser.add_argument('--host', dest="host", type=str, help='Host name', default="127.0.0.1")
 parser.add_argument('--port', dest="port", type=int, help='Port number', default="5000")
 parser.add_argument('--interval', dest="interval", type=int, help='Log scanning interval', default="30")
-parser.add_argument('--erigon-data-path', dest="erigon_data_path", type=str, help='Path of erigon data', default=".")
+parser.add_argument('--path', dest="path", type=str, help='Path to be monitored', default=".")
 parser.set_defaults(dumpjournal=True)
 
 args = parser.parse_args()
