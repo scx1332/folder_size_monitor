@@ -1,0 +1,71 @@
+<head>
+    <!-- Load plotly.js into the DOM -->
+    <script src='https://cdn.plot.ly/plotly-2.12.1.min.js'></script>
+    <script src='static/process_events.js'></script>
+</head>
+
+<body>
+
+<div style="padding: 20px;">
+    <div style="padding: 10px;">Last check: <span id="lastCheck"></span> <span id="lastErigon">Last Erigon event:</span></div>
+    <div style="padding: 10px;">Last block speed: <span id="lastSpeed"></span> blocks/s</div>
+    <div style="padding: 10px;">Estimated completion: <span id="estCompletion"></span> </div>
+</div>
+<div id='myDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+</body>
+
+<script>
+    var getJSON = function(url, callback) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.responseType = 'json';
+        xhr.onload = function() {
+            var status = xhr.status;
+            if (status === 200) {
+                callback(null, xhr.response);
+            } else {
+                callback(status, xhr.response);
+            }
+        };
+        xhr.send();
+    };
+
+    let plotFromJson = function (sizes) {
+        let d = plotSizes(sizes);
+        Plotly.newPlot('myDiv', d["plotlyData"], {
+            title: 'Size of monitored path',
+            yaxis: {
+                title: 'Size (bytes)',
+
+
+            },
+            yaxis2: {
+                title: 'yaxis2 title',
+                titlefont: {color: 'rgb(148, 103, 189)'},
+                tickfont: {color: 'rgb(148, 103, 189)'},
+                overlaying: 'y',
+                side: 'right'
+            }
+        });
+
+
+        document.getElementById("lastSpeed").innerHTML=d["lastSpeed"];
+        document.getElementById("estCompletion").innerHTML=d["estimatedCompletion"];
+        document.getElementById("lastErigon").innerHTML=d["lastDate"];
+
+    }
+    getJSON('{{sizes_url}}',
+        function(err, sizes) {
+            if (err !== null) {
+                alert('Something went wrong: ' + err);
+            } else {
+                console.log(`Sizes ${sizes}`)
+                //document.getElementById("lastCheck").innerHTML=sizes["last_check"];
+
+                plotFromJson(sizes);
+            }
+        });
+
+
+
+</script>
