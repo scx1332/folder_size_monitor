@@ -44,14 +44,14 @@ class ProcessClass:
                 size_history = json.loads(r.read())
         while True:
             try:
-                erigon_data_folder = args.erigon_data_path
+                folder = args.path
 
                 total_size = 0
-                for path, dirs, files in os.walk(erigon_data_folder):
+                for path, dirs, files in os.walk(folder):
                     for f in files:
                         fp = os.path.join(path, f)
                         total_size += os.path.getsize(fp)
-                logger.info(f"Total size of directory {erigon_data_folder} {total_size})")
+                logger.info(f"Total size of directory {folder} {total_size})")
                 size_history[datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")] = {
                     "path_size": total_size
                 }
