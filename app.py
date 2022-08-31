@@ -84,8 +84,12 @@ def hello():
 
 @app.route('/html')
 def html():
-    return render_template('plot.html', sizes_url="http://51.38.53.113:5000/sizes")
+    return render_template('plot.html', sizes_url=url_for("sizes"))
 
+
+@app.route('/htmltest')
+def htmltest():
+    return render_template('plot.html', sizes_url="http://51.38.53.113:5000/sizes")
 
 @app.route('/sizes')
 @cross_origin()
