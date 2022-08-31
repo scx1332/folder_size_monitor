@@ -50,7 +50,12 @@ class ProcessClass:
                 for path, dirs, files in os.walk(folder):
                     for f in files:
                         fp = os.path.join(path, f)
-                        total_size += os.path.getsize(fp)
+                        try:
+                            total_size += os.path.getsize(fp)
+                        except IOError as err:
+                            logger.error(f"Error getting size of {fp}: {err}")
+                            pass
+                        
                 logger.info(f"Total size of directory {folder} {total_size})")
                 size_history[datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")] = {
                     "path_size": total_size
