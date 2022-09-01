@@ -18,3 +18,5 @@ class PathInfoEntry(BaseClass):
     files_failed = Column(Integer, nullable=False)
     total_size = Column(Integer, nullable=False)
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

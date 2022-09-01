@@ -11,10 +11,10 @@ import logging
 from multiprocessing import Process
 from datetime import datetime
 from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import declarative_base, Session, relationship
+from sqlalchemy.orm import declarative_base, Session, relationship, scoped_session
 
 from model import PathInfo, BaseClass, PathInfoEntry
-from db import get_db_engine, db_session
+from db import db_engine
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -47,7 +47,6 @@ class ProcessClass:
 
     def run(self):
         size_history = {}
-        db_engine = get_db_engine()
         while True:
             try:
                 folder = args.path
@@ -72,9 +71,16 @@ class ProcessClass:
                     "files_found": number_of_files_found,
                     "files_failed": number_of_files_failed
                 }
+                start = time.time()
+                path_info_entry = PathInfoEntry(path_info=self._path_info.id,
+                                                total_size=total_size,
+                                                files_checked=number_of_files_found,
+                                                files_failed=number_of_files_failed)
                 with Session(db_engine) as session:
-                    session.add(PathInfoEntry(path_info=self._path_info.id, total_size=total_size, files_checked=number_of_files_found, files_failed=number_of_files_failed))
+                    session.add(path_info_entry)
                     session.commit()
+                end = time.time()
+                logger.info(f"DB insert time: {end - start:0.3f}s")
 
             except Exception as ex:
                 logger.error(f"Failure when checking directory size: {ex}")
@@ -101,40 +107,40 @@ def htmltest():
 @app.route('/sizes')
 @cross_origin()
 def sizes():
-    global events_history
-
-    with open("size_history.json", "r") as f:
-        resp = app.response_class(
-            response=f.read(),
-            status=200,
-            mimetype='application/json'
-        )
+    with Session(db_engine) as session:
+        res = session.query(PathInfoEntry).all()
+    res = list(map(lambda x: x.as_dict(), res))
+    resp = app.response_class(
+        response=json.dumps(res),
+        status=200,
+        mimetype='application/json'
+    )
     return resp
 
 
 def main():
-    db = get_db_engine()
-    BaseClass.metadata.create_all(db)
+    BaseClass.metadata.create_all(db_engine)
 
-    res = db_session.query(PathInfo).filter_by(path=args.path).all()
-
-    if not res:
-        pi = PathInfo(path=args.path)
-        db_session.add(pi)
-        db_session.commit()
+    with Session(db_engine) as db_session:
         res = db_session.query(PathInfo).filter_by(path=args.path).all()
 
-    if len(res) == 0:
-        raise Exception("Cannot get or create PathInfo object")
-    if len(res) > 1:
-        logger.warning("More than one PathInfo object found")
+        if not res:
+            pi = PathInfo(path=args.path)
+            db_session.add(pi)
+            db_session.commit()
+            res = db_session.query(PathInfo).filter_by(path=args.path).all()
 
-    path_info = res[0]
-    begin = ProcessClass(path_info)
+        if len(res) == 0:
+            raise Exception("Cannot get or create PathInfo object")
+        if len(res) > 1:
+            logger.warning("More than one PathInfo object found")
+
+        path_info = res[0]
+        begin = ProcessClass(path_info)
 
     app.run(host=args.host, port=args.port, debug=True, use_reloader=False)
     begin.wait()
 
+
 if __name__ == "__main__":
     main()
-

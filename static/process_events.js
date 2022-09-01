@@ -18,7 +18,7 @@ function plotSizes(sizes) {
     console.log(sizes);
     for (let dt in sizes) {
         sizes_times.push(dt);
-        sizes_values.push(sizes[dt]["path_size"]);
+        sizes_values.push(sizes[dt]["total_size"]);
     }
 
     let plotlyData = [
