@@ -14,7 +14,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import declarative_base, Session, relationship
 
 from model import PathInfo, BaseClass, PathInfoEntry
-from db import get_db_engine
+from db import get_db_engine, db_session
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -35,18 +35,19 @@ cors = CORS(app)
 
 
 class ProcessClass:
-    def __init__(self):
-        p = Process(target=self.run, args=())
-        p.daemon = True                       # Daemonize it
-        p.start()                             # Start the execution
+    def __init__(self, path_info):
+        self._path_info = path_info
+        self._p = Process(target=self.run, args=())
+        self._p.daemon = True
+        self._p.start()
         pass
+
+    def wait(self):
+        self._p.join()
 
     def run(self):
         size_history = {}
         db_engine = get_db_engine()
-        if os.path.exists("size_history.json"):
-            with open("size_history.json", "r") as r:
-                size_history = json.loads(r.read())
         while True:
             try:
                 folder = args.path
@@ -71,11 +72,8 @@ class ProcessClass:
                     "files_found": number_of_files_found,
                     "files_failed": number_of_files_failed
                 }
-                with open("size_history_tmp.json", "w") as w:
-                    w.write(json.dumps(size_history, indent=4, default=str))
-                shutil.move("size_history_tmp.json", "size_history.json")
                 with Session(db_engine) as session:
-                    session.add(PathInfoEntry(total_size=total_size, files_checked=number_of_files_found, files_failed=number_of_files_failed))
+                    session.add(PathInfoEntry(path_info=self._path_info.id, total_size=total_size, files_checked=number_of_files_found, files_failed=number_of_files_failed))
                     session.commit()
 
             except Exception as ex:
@@ -114,26 +112,29 @@ def sizes():
     return resp
 
 
-if __name__ == "__main__":
+def main():
     db = get_db_engine()
     BaseClass.metadata.create_all(db)
 
-    with Session(db) as session:
-        res = session.query(PathInfo).filter_by(path=args.path).all()
+    res = db_session.query(PathInfo).filter_by(path=args.path).all()
 
-        if not res:
-            pi = PathInfo(path=args.path)
-            session.add(pi)
-            session.commit()
-            res = session.query(PathInfo).filter_by(path=args.path).all()
+    if not res:
+        pi = PathInfo(path=args.path)
+        db_session.add(pi)
+        db_session.commit()
+        res = db_session.query(PathInfo).filter_by(path=args.path).all()
 
     if len(res) == 0:
         raise Exception("Cannot get or create PathInfo object")
     if len(res) > 1:
         logger.warning("More than one PathInfo object found")
 
-    pi = res[0]
-    begin = ProcessClass()
+    path_info = res[0]
+    begin = ProcessClass(path_info)
 
     app.run(host=args.host, port=args.port, debug=True, use_reloader=False)
+    begin.wait()
+
+if __name__ == "__main__":
+    main()
 

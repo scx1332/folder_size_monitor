@@ -1,5 +1,6 @@
 import os
 from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 
 def get_db_engine():
@@ -14,4 +15,7 @@ def get_db_engine():
         raise Exception(f"Unknown database type {db_type}")
     return engine
 
+
+db_engine = get_db_engine()
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=db_engine))
 

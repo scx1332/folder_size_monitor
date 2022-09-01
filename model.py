@@ -13,7 +13,7 @@ class PathInfo(BaseClass):
 class PathInfoEntry(BaseClass):
     __tablename__ = "path_info_entry"
     id = Column(Integer, primary_key=True)
-    #path_info = Column(PathInfo, ForeignKey("path_info.id"), nullable=False)
+    path_info = Column(Integer, ForeignKey("path_info.id"), nullable=False)
     files_checked = Column(Integer, nullable=False)
     files_failed = Column(Integer, nullable=False)
     total_size = Column(Integer, nullable=False)
