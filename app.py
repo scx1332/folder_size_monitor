@@ -10,12 +10,18 @@ import argparse
 import logging
 from multiprocessing import Process
 from datetime import datetime
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import declarative_base, Session, relationship
+
+from model import PathInfo, BaseClass, PathInfoEntry
+from db import get_db_engine
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 parser = argparse.ArgumentParser(description='Erigon monitor params')
+parser.add_argument('--db', dest="db", type=str, help='sqlite or postgres', default="sqlite")
 parser.add_argument('--host', dest="host", type=str, help='Host name', default="127.0.0.1")
 parser.add_argument('--port', dest="port", type=int, help='Port number', default="5000")
 parser.add_argument('--interval', dest="interval", type=int, help='Log scanning interval', default="30")
@@ -37,7 +43,7 @@ class ProcessClass:
 
     def run(self):
         size_history = {}
-
+        db_engine = get_db_engine()
         if os.path.exists("size_history.json"):
             with open("size_history.json", "r") as r:
                 size_history = json.loads(r.read())
@@ -68,6 +74,9 @@ class ProcessClass:
                 with open("size_history_tmp.json", "w") as w:
                     w.write(json.dumps(size_history, indent=4, default=str))
                 shutil.move("size_history_tmp.json", "size_history.json")
+                with Session(db_engine) as session:
+                    session.add(PathInfoEntry(total_size=total_size, files_checked=number_of_files_found, files_failed=number_of_files_failed))
+                    session.commit()
 
             except Exception as ex:
                 logger.error(f"Failure when checking directory size: {ex}")
@@ -106,7 +115,25 @@ def sizes():
 
 
 if __name__ == "__main__":
-    print("test")
+    db = get_db_engine()
+    BaseClass.metadata.create_all(db)
+
+    with Session(db) as session:
+        res = session.query(PathInfo).filter_by(path=args.path).all()
+
+        if not res:
+            pi = PathInfo(path=args.path)
+            session.add(pi)
+            session.commit()
+            res = session.query(PathInfo).filter_by(path=args.path).all()
+
+    if len(res) == 0:
+        raise Exception("Cannot get or create PathInfo object")
+    if len(res) > 1:
+        logger.warning("More than one PathInfo object found")
+
+    pi = res[0]
     begin = ProcessClass()
 
     app.run(host=args.host, port=args.port, debug=True, use_reloader=False)
+
