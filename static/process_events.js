@@ -19,9 +19,7 @@ function plotSizes(sizes) {
     for (let dt in sizes) {
         sizes_times.push(dt);
         sizes_values.push(sizes[dt]["path_size"]);
-
     }
-
 
     let plotlyData = [
         {
@@ -34,11 +32,4 @@ function plotSizes(sizes) {
     return {
         "plotlyData": plotlyData,
     };
-
-
-
-
-
-
-
 }
