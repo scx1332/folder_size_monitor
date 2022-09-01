@@ -1,5 +1,3 @@
-import time
-
 from flask import Flask, render_template, url_for
 from flask_cors import CORS, cross_origin
 from flask import request
@@ -8,13 +6,11 @@ import os
 import shutil
 import argparse
 import logging
-from multiprocessing import Process
-from datetime import datetime
-from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import declarative_base, Session, relationship, scoped_session
 
 from model import PathInfo, BaseClass, PathInfoEntry
 from db import db_engine
+from path_sizer import ProcessClass
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -34,58 +30,7 @@ app = Flask(__name__)
 cors = CORS(app)
 
 
-class ProcessClass:
-    def __init__(self, path_info):
-        self._path_info = path_info
-        self._p = Process(target=self.run, args=())
-        self._p.daemon = True
-        self._p.start()
-        pass
 
-    def wait(self):
-        self._p.join()
-
-    def run(self):
-        size_history = {}
-        while True:
-            try:
-                folder = args.path
-
-                total_size = 0
-                number_of_files_found = 0
-                number_of_files_failed = 0
-                for path, dirs, files in os.walk(folder):
-                    for f in files:
-                        fp = os.path.join(path, f)
-                        try:
-                            total_size += os.path.getsize(fp)
-                            number_of_files_found += 1
-                        except IOError as err:
-                            number_of_files_failed += 1
-                            logger.error(f"Error getting size of {fp}: {err}")
-                            pass
-
-                logger.info(f"Total size of directory {folder} {total_size})")
-                size_history[datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")] = {
-                    "path_size": total_size,
-                    "files_found": number_of_files_found,
-                    "files_failed": number_of_files_failed
-                }
-                start = time.time()
-                path_info_entry = PathInfoEntry(path_info=self._path_info.id,
-                                                total_size=total_size,
-                                                files_checked=number_of_files_found,
-                                                files_failed=number_of_files_failed)
-                with Session(db_engine) as session:
-                    session.add(path_info_entry)
-                    session.commit()
-                end = time.time()
-                logger.info(f"DB insert time: {end - start:0.3f}s")
-
-            except Exception as ex:
-                logger.error(f"Failure when checking directory size: {ex}")
-
-            time.sleep(args.interval)
 
 
 @app.route('/')
@@ -136,7 +81,7 @@ def main():
             logger.warning("More than one PathInfo object found")
 
         path_info = res[0]
-        begin = ProcessClass(path_info)
+        begin = ProcessClass(path_info, args.path, args.interval)
 
     app.run(host=args.host, port=args.port, debug=True, use_reloader=False)
     begin.wait()
