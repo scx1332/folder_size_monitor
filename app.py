@@ -8,9 +8,9 @@ import argparse
 import logging
 from sqlalchemy.orm import declarative_base, Session, relationship, scoped_session
 
-from model import PathInfo, BaseClass, PathInfoEntry
+from model import PathInfo, BaseClass, PathInfoEntry, LocalJSONEncoder, SerializationMode
 from db import db_engine
-from path_sizer import ProcessClass
+from path_sizer import ProcessClass, DirectoryCheckJob
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -28,9 +28,6 @@ args = parser.parse_args()
 
 app = Flask(__name__)
 cors = CORS(app)
-
-
-
 
 
 @app.route('/')
@@ -54,9 +51,8 @@ def htmltest():
 def sizes():
     with Session(db_engine) as session:
         res = session.query(PathInfoEntry).all()
-    res = list(map(lambda x: x.as_dict(), res))
     resp = app.response_class(
-        response=json.dumps(res),
+        response=json.dumps(res, cls=LocalJSONEncoder, mode=SerializationMode.FULL),
         status=200,
         mimetype='application/json'
     )
@@ -66,25 +62,37 @@ def sizes():
 def main():
     BaseClass.metadata.create_all(db_engine)
 
-    with Session(db_engine) as db_session:
-        res = db_session.query(PathInfo).filter_by(path=args.path).all()
+    with open("config.json", "r") as f:
+        config = json.load(f)
 
-        if not res:
-            pi = PathInfo(path=args.path)
-            db_session.add(pi)
-            db_session.commit()
-            res = db_session.query(PathInfo).filter_by(path=args.path).all()
+    processes = []
+    for config_job in config["jobs"]:
+        directory_check_jobs = []
+        for config_command in config_job["commands"]:
+            path = config_command["path"]
+            with Session(db_engine) as db_session:
+                res = db_session.query(PathInfo).filter_by(path=path).all()
 
-        if len(res) == 0:
-            raise Exception("Cannot get or create PathInfo object")
-        if len(res) > 1:
-            logger.warning("More than one PathInfo object found")
+                if not res:
+                    pi = PathInfo(path=path)
+                    db_session.add(pi)
+                    db_session.commit()
+                    res = db_session.query(PathInfo).filter_by(path=path).all()
 
-        path_info = res[0]
-        begin = ProcessClass(path_info, args.path, args.interval)
+            if len(res) == 0:
+                raise Exception("Cannot get or create PathInfo object")
+            if len(res) > 1:
+                logger.warning("More than one PathInfo object found")
+
+            pi = res[0]
+            directory_check_jobs.append(DirectoryCheckJob(pi))
+
+        processes.append(ProcessClass(config_job["interval_seconds"], directory_check_jobs))
 
     app.run(host=args.host, port=args.port, debug=True, use_reloader=False)
-    begin.wait()
+
+    for p in processes:
+        p.wait()
 
 
 if __name__ == "__main__":
