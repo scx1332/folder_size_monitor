@@ -1,0 +1,26 @@
+{
+    "jobs": [
+        {
+            "interval_seconds": 1,
+            "commands": [
+                {
+                    "type": "path_check",
+                    "path": "./static/templates"
+                },
+                {
+                    "type": "path_check",
+                    "path": "./local"
+                }
+            ]
+        },
+        {
+            "interval_seconds": 5,
+            "commands": [
+                {
+                    "type": "path_check",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}
