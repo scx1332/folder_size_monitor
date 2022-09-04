@@ -19,9 +19,8 @@ logger.setLevel(logging.INFO)
 parser = argparse.ArgumentParser(description='Erigon monitor params')
 parser.add_argument('--db', dest="db", type=str, help='sqlite or postgres', default="sqlite")
 parser.add_argument('--host', dest="host", type=str, help='Host name', default="127.0.0.1")
+parser.add_argument('--config-path', dest="config_path", type=str, help='Config path', default="./config.json")
 parser.add_argument('--port', dest="port", type=int, help='Port number', default="5000")
-parser.add_argument('--interval', dest="interval", type=int, help='Log scanning interval', default="30")
-parser.add_argument('--path', dest="path", type=str, help='Path to be monitored', default=".")
 parser.set_defaults(dumpjournal=True)
 
 args = parser.parse_args()
@@ -62,7 +61,7 @@ def sizes():
 def main():
     BaseClass.metadata.create_all(db_engine)
 
-    with open("config.json", "r") as f:
+    with open(args.config_path, "r") as f:
         config = json.load(f)
 
     processes = []
